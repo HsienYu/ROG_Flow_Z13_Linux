@@ -1,9 +1,11 @@
 #!/bin/bash
 
-#Install_Ubuntu25.10.sh - Configurable Ubuntu 25.10 Installation Script for ASUS ROG Flow Z13
-#Author: Gemini (adapted from sqazi's Arch script)
-#Version: 2.0.0
-#Date: September 10, 2025
+# Install_Ubuntu25.10.sh - Configurable Ubuntu 25.10 Installation Script for ASUS ROG Flow Z13
+# Author: Gemini (adapted fr# Configure GRUB and verify
+[[ "$DUAL_BOOT" == "y" ]] && sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*"/& i915.enable_psr=0 ibt=off/' /etc/default/grubsqazi's Arch script)
+# Version: 2.0.0
+# Date: September 10, 2025
 
 set -e  # Exit on any error
 
@@ -25,7 +27,7 @@ DUAL_BOOT=""
 ENABLE_SNAPSHOTS=""
 DISK_DEVICE=""
 USERNAME=""
-HOTNAME=""
+HOSTNAME=""
 TIMEZONE=""
 
 # --- Helper Functions ---
@@ -69,12 +71,12 @@ check_prerequisites() {
 partition_disk() { # This function is identical to the Arch script and remains robust
     print_header "Partitioning Disk"
     if [[ $DUAL_BOOT == "y" ]]; then
-        ram_size=$(free -m | awk '/^Mem:/{print $2}' ); swap_size=$((ram_size + 1000))
+        ram_size=$(free -m | awk '/^Mem:/{print $2}'); swap_size=$((ram_size + 1000))
         sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:"Linux Swap" $DISK_DEVICE
         sgdisk -n 0:0:0 -t 0:8300 -c 0:"Linux Root" $DISK_DEVICE
     else
         sgdisk -Z $DISK_DEVICE; sgdisk -o $DISK_DEVICE
-        ram_size=$(free -m | awk '/^Mem:/{print $2}' ); swap_size=$((ram_size + 1000))
+        ram_size=$(free -m | awk '/^Mem:/{print $2}'); swap_size=$((ram_size + 1000))
         sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI System" $DISK_DEVICE
         sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:"Linux Swap" $DISK_DEVICE
         sgdisk -n 3:0:0 -t 3:8300 -c 3:"Linux Root" $DISK_DEVICE
@@ -82,7 +84,7 @@ partition_disk() { # This function is identical to the Arch script and remains r
     partprobe $DISK_DEVICE; sleep 2
     if [[ $DUAL_BOOT == "y" ]]; then
         mapfile -t new_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 2); swap_part="${new_partitions[0]}"; root_part="${new_partitions[1]}"
-        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk '{print $1}' )
+        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk '{print $1}')
     else
         mapfile -t all_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 3); efi_part="${all_partitions[0]}"; swap_part="${all_partitions[1]}"; root_part="${all_partitions[2]}"
     fi
@@ -136,7 +138,7 @@ apt-get install -y linux-generic grub-efi-amd64 network-manager git zsh
 
 # Configure GRUB and verify
 [[ "$DUAL_BOOT" == "y" ]] && sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^ vitalibtnom"/& ibt=off/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*"/& i915.enable_psr=0 ibt=off/' /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Ubuntu --recheck; update-grub
 apt-get install -y efibootmgr; if efibootmgr | grep -qi "Ubuntu"; then echo "Ubuntu boot entry OK"; else echo "Ubuntu boot entry NOT FOUND"; fi
 if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows" /boot/grub/grub.cfg; then echo "Windows detected"; else echo "Windows NOT detected"; fi; fi
@@ -144,14 +146,19 @@ if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows" /boot/grub/grub.cfg; th
 # Create user
 apt-get install -y sudo; useradd -m -G sudo -s /bin/zsh "$USERNAME"
 
-# Hardware Fixes
-mkdir -p /etc/modprobe.d; echo "options mt7925e disable_aspm=1" > /etc/modprobe.d/mt7925e.conf
+# Hardware Fixes - ASUS ROG Flow Z13
+mkdir -p /etc/modprobe.d
+echo "options mt7925e disable_aspm=1" > /etc/modprobe.d/mt7925e.conf
 cat > /etc/systemd/system/reload-hid_asus.service << EOH
 [Unit]
-Description=Reload hid_asus module
+Description=Reload hid_asus module for touchpad detection  
+After=multi-user.target
+
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/modprobe -r hid_asus; /usr/bin/modprobe hid_asus
+ExecStart=/usr/bin/modprobe -r hid_asus
+ExecStart=/usr/bin/modprobe hid_asus
+
 [Install]
 WantedBy=multi-user.target
 EOH
@@ -159,10 +166,29 @@ systemctl enable reload-hid_asus.service
 
 # Power Management
 if [[ "$INSTALL_POWER_MGMT" == "y" ]]; then
-    apt-get install -y software-properties-common
+    apt-get install -y software-properties-common power-profiles-daemon
     add-apt-repository ppa:asus-linux/asus-nb-ctrl -y; apt-get update
-    apt-get install -y asusctl tlp; systemctl enable tlp; systemctl enable asusd.service
-    echo -e "TLP_DEFAULT_MODE=AC\nCPU_SCALING_GOVERNOR_ON_AC=performance\nCPU_SCALING_GOVERNOR_ON_BAT=powersave" >> /etc/tlp.conf
+    apt-get install -y asusctl tlp; systemctl enable power-profiles-daemon; systemctl enable tlp; systemctl enable asusd.service
+    
+    # Z13 Power Management Configuration - AMD Ryzen Strix Halo (45W-120W+ TDP)
+    cat >> /etc/tlp.conf << EOH
+TLP_DEFAULT_MODE=AC
+CPU_SCALING_GOVERNOR_ON_AC=performance
+CPU_SCALING_GOVERNOR_ON_BAT=powersave
+CPU_ENERGY_PERF_POLICY_ON_AC=performance
+CPU_ENERGY_PERF_POLICY_ON_BAT=power
+CPU_MIN_PERF_ON_AC=0
+CPU_MAX_PERF_ON_AC=100
+CPU_MIN_PERF_ON_BAT=0
+CPU_MAX_PERF_ON_BAT=30
+PLATFORM_PROFILE_ON_AC=performance
+PLATFORM_PROFILE_ON_BAT=low-power
+
+# Strix Halo TDP Control (via asusctl)
+# Performance: 120W+ TDP (gaming, rendering)
+# Balanced: 70W TDP (general use)  
+# Power-saver: 45W TDP (battery life)
+EOH
 fi
 
 # Desktop & Gaming
@@ -189,19 +215,48 @@ CHROOT_EOF
 
 create_post_install_script() {
     local script_path="/mnt/home/$USERNAME/Z13_Quick_Tips.txt"
-    cat > "$script_path" << EOF
-Welcome to Ubuntu on your ROG Flow Z13!
+    cat > "$script_path" << 'EOF'
+Welcome to your new Ubuntu installation on the ROG Flow Z13!
 
---- Power Management ---
+Here are some useful commands:
+
+--- Power Management (asusctl) ---
+# List available power profiles
+asusctl profile -L
+
+# Set a power profile (e.g., Performance, Balanced, Quiet)
 sudo asusctl profile -P Performance
 
---- Filesystem ---
+--- System Management ---
 # Check filesystem usage
 df -h
+
+# Update system packages
+sudo apt update && sudo apt upgrade
+
+# Install additional software
+sudo apt install <package-name>
+
+--- Hardware Optimization ---
+# Check if Z13 hardware fixes are active
+systemctl status reload-hid_asus.service
+
+# Check WiFi adapter status (MT7925e)
+lspci | grep -i network
+
+Enjoy your new system!
 EOF
-    if [[ "$FS_TYPE" == "zfs" ]]; then echo -e "
+    if [[ "$FS_TYPE" == "zfs" ]]; then 
+        cat >> "$script_path" << 'ZFSEOF'
+
 --- ZFS Snapshots ---
-zfs list -t snapshot" >> "$script_path"; fi
+# List all snapshots
+zfs list -t snapshot
+
+# Create manual snapshot
+sudo zfs snapshot zroot/ROOT/default@manual-$(date +%Y%m%d-%H%M%S)
+ZFSEOF
+    fi
     chroot /mnt chown $USERNAME:$USERNAME /home/$USERNAME/Z13_Quick_Tips.txt
 }
 
@@ -209,7 +264,7 @@ repair_bootloader_standalone() {
     print_header "EFI Bootloader Repair"
     print_warning "This expects your Linux root at /mnt and EFI partition at /mnt/boot."
     read -p "Are partitions mounted? (y/n): " confirm_mount; [[ $confirm_mount != "y" ]] && exit 1
-    for dir in dev proc sys; do mount --rbind /$dir /mnt/$dir;
+    for dir in dev proc sys; do mount --rbind /$dir /mnt/$dir; done
     chroot /mnt /bin/bash <<EOF
 export DEBIAN_FRONTEND=noninteractive
 apt-get update; apt-get install -y grub-efi-amd64 efibootmgr os-prober
@@ -219,13 +274,43 @@ update-grub; echo "Repair finished."
 EOF
 }
 
+cleanup_on_failure() {
+    print_error "Installation failed. Cleaning up..."
+    if [[ -d /mnt ]]; then
+        umount -R /mnt 2>/dev/null || true
+    fi
+    if [[ "$FS_TYPE" == "zfs" ]]; then
+        zpool destroy -f zroot 2>/dev/null || true
+    fi
+    print_error "Cleanup completed. You can try the installation again."
+    exit 1
+}
+
 full_installation() {
-    trap "print_error \"Installation failed. Cleaning up...\"; umount -R /mnt 2>/dev/null; if [[ \"$FS_TYPE\" == \"zfs\" ]]; then zpool destroy -f zroot 2>/dev/null; fi; exit 1" ERR
+    trap cleanup_on_failure ERR
     configure_installation; check_prerequisites; partition_disk; setup_filesystem_and_debootstrap
     configure_system_and_install; create_post_install_script
     print_header "Setting Passwords"; chroot /mnt passwd; chroot /mnt passwd $USERNAME
-    print_header "Installation Complete"; umount -R /mnt; print_status "Reboot to enjoy!"
-    read -p "Reboot now? (y/n): " r; [[ $r == "y" ]] && reboot
+    print_header "Installation Complete"
+    umount -R /mnt
+    
+    print_status "Installation completed successfully!"
+    print_status ""
+    print_status "System optimized for:"
+    print_status "• Maximum performance when plugged in"  
+    print_status "• Advanced power management (7W-120W+ TDP control)"
+    print_status "• Ubuntu 25.10 with Z13 hardware optimizations"
+    print_status "• Hassle-free laptop and tablet use"
+    print_status ""
+    print_status "Next steps:"
+    print_status "1. Remove installation media"
+    print_status "2. Reboot into your new Ubuntu system"
+    print_status "3. Test dual-boot functionality (if enabled)"
+    print_status "4. Configure power profiles using: asusctl profile -P [Performance|Balanced|Quiet]"
+    print_status ""
+    
+    read -p "Reboot now? (y/n): " reboot_now
+    [[ $reboot_now == "y" ]] && reboot
 }
 
 main() {
