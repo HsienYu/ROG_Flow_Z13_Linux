@@ -8,11 +8,16 @@
 set -e  # Exit on any error
 
 # --- Colors and Global Vars ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+RED='
+033[0;31m'
+GREEN='
+033[0;32m'
+YELLOW='
+033[1;33m'
+BLUE='
+033[0;34m'
+NC='
+033[0m' # No Color
 
 # Configuration variables
 FS_TYPE=""
@@ -66,7 +71,7 @@ configure_installation() {
     
     echo "Desktop Options: 1) Omarchy 2) XFCE 3) i3 4) GNOME 5) KDE 6) Minimal"
     read -p "Choose desktop environment (1): " desktop_choice
-    case $desktop_choice in 1) INSTALL_DESKTOP=\"omarchy\";; 2) INSTALL_DESKTOP=\"xfce\";; 3) INSTALL_DESKTOP=\"i3\";; 4) INSTALL_DESKTOP=\"gnome\";; 5) INSTALL_DESKTOP=\"kde\";; 6) INSTALL_DESKTOP=\"minimal\";; *) INSTALL_DESKTOP=\"omarchy\";; esac
+    case $desktop_choice in 1) INSTALL_DESKTOP="omarchy";; 2) INSTALL_DESKTOP="xfce";; 3) INSTALL_DESKTOP="i3";; 4) INSTALL_DESKTOP="gnome";; 5) INSTALL_DESKTOP="kde";; 6) INSTALL_DESKTOP="minimal";; *) INSTALL_DESKTOP="omarchy";; esac
     
     read -p "Install gaming setup (Steam, Proton, GameMode)? (y/n): " INSTALL_GAMING
     read -p "Install advanced power management (asusctl, TLP)? (y/n): " INSTALL_POWER_MGMT
@@ -94,13 +99,15 @@ partition_disk() {
     print_header "Partitioning Disk"
     if [[ $DUAL_BOOT == "y" ]]; then
         print_status "Dual-boot mode: Creating Linux partitions in free space."
-        ram_size=$(free -m | awk \'/^Mem:/{print $2}\' ); swap_size=$((ram_size + 1000))
+        ram_size=$(free -m | awk 
+'/^Mem:/{print $2}'); swap_size=$((ram_size + 1000))
         sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:"Linux Swap" $DISK_DEVICE
         sgdisk -n 0:0:0 -t 0:8300 -c 0:"Linux Root" $DISK_DEVICE
     else
         print_status "Single-boot mode: Wiping disk and creating new partition table."
         sgdisk -Z $DISK_DEVICE; sgdisk -o $DISK_DEVICE
-        ram_size=$(free -m | awk \'/^Mem:/{print $2}\' ); swap_size=$((ram_size + 1000))
+        ram_size=$(free -m | awk 
+'/^Mem:/{print $2}'); swap_size=$((ram_size + 1000))
         sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI System" $DISK_DEVICE
         sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:"Linux Swap" $DISK_DEVICE
         sgdisk -n 3:0:0 -t 3:8300 -c 3:"Linux Root" $DISK_DEVICE
@@ -113,7 +120,8 @@ partition_disk() {
     if [[ $DUAL_BOOT == "y" ]]; then
         mapfile -t new_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 2)
         swap_part="${new_partitions[0]}"; root_part="${new_partitions[1]}"
-        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk \'{print $1}\' )
+        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk 
+'{print $1}')
     else
         mapfile -t all_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 3)
         efi_part="${all_partitions[0]}"; swap_part="${all_partitions[1]}"; root_part="${all_partitions[2]}"
@@ -125,8 +133,8 @@ setup_filesystem() {
     print_header "Formatting and Mounting Filesystem ($FS_TYPE)"
     
     # Format EFI (if not dual-boot) and Swap
-    [[ $DUAL_BOOT != "y" ]] && { print_status "Formatting EFI partition..."; mkfs.fat -F32 -n \"EFI\" $efi_part; }
-    print_status "Setting up swap..."; mkswap -L \"Arch_Swap\" $swap_part; swapon $swap_part
+    [[ $DUAL_BOOT != "y" ]] && { print_status "Formatting EFI partition..."; mkfs.fat -F32 -n "EFI" $efi_part; }
+    print_status "Setting up swap..."; mkswap -L "Arch_Swap" $swap_part; swapon $swap_part
 
     if [[ "$FS_TYPE" == "zfs" ]]; then
         print_status "Creating ZFS pool \'zroot\'...".
@@ -146,7 +154,7 @@ setup_filesystem() {
         zfs mount zroot/ROOT/default; zfs mount -a
     else # ext4
         print_status "Formatting root partition with ext4..."
-        mkfs.ext4 -L \"Arch_Root\" $root_part
+        mkfs.ext4 -L "Arch_Root" $root_part
         print_status "Mounting ext4 root partition..."
         mount $root_part /mnt
     fi
@@ -181,13 +189,14 @@ echo "$HOSTNAME" > /etc/hostname
 echo "127.0.0.1 localhost" >> /etc/hosts; echo "::1 localhost" >> /etc/hosts; echo "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME" >> /etc/hosts
 
 if [[ "$DUAL_BOOT" == "y" ]]; then echo "GRUB_DISABLE_OS_PROBER=false" >> /etc/default/grub; fi
-sed -i \'s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\"/& ibt=off/\' /etc/default/grub
+sed -i 
+'s/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*"/& ibt=off/' /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
-echo -e "\n\033[0;34m--- Verifying Bootloader ---\\033[0m"
-if efibootmgr | grep -q "GRUB"; then echo -e "\033[0;32m[INFO] GRUB boot entry created successfully.\\033[0m"; else echo -e "\033[1;33m[WARNING] GRUB boot entry not found via efibootmgr.\\033[0m"; fi
-if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows Boot Manager" /boot/grub/grub.cfg; then echo -e "\033[0;32m[INFO] Windows detected.\\033[0m"; else echo -e "\033[1;33m[WARNING] Windows not detected by os-prober.\\033[0m"; fi; fi
+echo -e "\n\033[0;34m--- Verifying Bootloader ---\033[0m"
+if efibootmgr | grep -q "GRUB"; then echo -e "\033[0;32m[INFO] GRUB boot entry created successfully.\033[0m"; else echo -e "\033[1;33m[WARNING] GRUB boot entry not found via efibootmgr.\033[0m"; fi
+if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows Boot Manager" /boot/grub/grub.cfg; then echo -e "\033[0;32m[INFO] Windows detected.\033[0m"; else echo -e "\033[1;33m[WARNING] Windows not detected by os-prober.\033[0m"; fi; fi
 
 useradd -m -G wheel -s /bin/zsh $USERNAME
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/10-wheel-sudo
@@ -272,9 +281,9 @@ install_yay() {
     if command -v yay &> /dev/null; then return; fi
     pacman -S --noconfirm --needed git base-devel
     cd /tmp
-    sudo -u \$USERNAME git clone https://aur.archlinux.org/yay.git
+    sudo -u $USERNAME git clone https://aur.archlinux.org/yay.git
     cd yay
-    sudo -u \$USERNAME makepkg -si --noconfirm
+    sudo -u $USERNAME makepkg -si --noconfirm
     cd / && rm -rf /tmp/yay
 }
 
@@ -296,14 +305,14 @@ systemctl enable reload-hid_asus.service
 if [[ "$INSTALL_POWER_MGMT" == "y" ]]; then
     install_yay
     pacman -S --noconfirm tlp
-    sudo -u \$USERNAME yay -S --noconfirm asusctl
+    sudo -u $USERNAME yay -S --noconfirm asusctl
     systemctl enable tlp; systemctl enable asusd.service
     echo -e "TLP_DEFAULT_MODE=AC\nCPU_SCALING_GOVERNOR_ON_AC=performance\nCPU_SCALING_GOVERNOR_ON_BAT=powersave" >> /etc/tlp.conf
 fi
 
 # Desktop Environment
 case "$INSTALL_DESKTOP" in
-    "omarchy") install_yay; sudo -u \$USERNAME yay -S --noconfirm omarchy; pacman -S --noconfirm lightdm; systemctl enable lightdm;; 
+    "omarchy") install_yay; sudo -u $USERNAME yay -S --noconfirm omarchy; pacman -S --noconfirm lightdm; systemctl enable lightdm;; 
     "xfce") pacman -S --noconfirm xfce4 xfce4-goodies lightdm; systemctl enable lightdm;; 
     "i3") pacman -S --noconfirm i3-wm i3status dmenu lightdm; systemctl enable lightdm;; 
     "gnome") pacman -S --noconfirm gnome; systemctl enable gdm;; 
@@ -313,7 +322,9 @@ if [[ "$INSTALL_DESKTOP" != "minimal" ]]; then pacman -S --noconfirm xorg-server
 
 # Gaming
 if [[ "$INSTALL_GAMING" == "y" ]]; then
-    sed -i "/\\[multilib\\]/",'/Include/' s/^#// /etc/pacman.conf
+    sed -i "/\[multilib\]/",'/
+Include/
+' s/^#// /etc/pacman.conf
     pacman -Sy
     pacman -S --noconfirm steam gamemode mangohud lib32-mesa
 fi
