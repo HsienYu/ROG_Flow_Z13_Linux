@@ -51,7 +51,7 @@ configure_installation() {
     while true; do
         read -p "Enter the disk device (e.g., nvme0n1): " DISK_DEVICE
         [[ -z "$DISK_DEVICE" ]] && { print_error "Disk device cannot be empty."; continue; }
-        DISK_DEVICE=\"${DISK_DEVICE#/dev/}\"
+        DISK_DEVICE="${DISK_DEVICE#/dev/}"
         [[ ! -b "/dev/$DISK_DEVICE" ]] && { print_error "Disk /dev/$DISK_DEVICE does not exist."; continue; }
         print_warning "You selected: /dev/$DISK_DEVICE"
         read -p "Is this correct? (y/n): " confirm_disk
@@ -94,16 +94,16 @@ partition_disk() {
     print_header "Partitioning Disk"
     if [[ $DUAL_BOOT == "y" ]]; then
         print_status "Dual-boot mode: Creating Linux partitions in free space."
-        ram_size=$(free -m | awk \\'/^Mem:/{print $2}\\' ); swap_size=$((ram_size + 1000))
-        sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:\"Linux Swap\" $DISK_DEVICE
-        sgdisk -n 0:0:0 -t 0:8300 -c 0:\"Linux Root\" $DISK_DEVICE
+        ram_size=$(free -m | awk \'/^Mem:/{print $2}\' ); swap_size=$((ram_size + 1000))
+        sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:"Linux Swap" $DISK_DEVICE
+        sgdisk -n 0:0:0 -t 0:8300 -c 0:"Linux Root" $DISK_DEVICE
     else
         print_status "Single-boot mode: Wiping disk and creating new partition table."
         sgdisk -Z $DISK_DEVICE; sgdisk -o $DISK_DEVICE
-        ram_size=$(free -m | awk \\'/^Mem:/{print $2}\\' ); swap_size=$((ram_size + 1000))
-        sgdisk -n 1:0:+512M -t 1:ef00 -c 1:\"EFI System\" $DISK_DEVICE
-        sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:\"Linux Swap\" $DISK_DEVICE
-        sgdisk -n 3:0:0 -t 3:8300 -c 3:\"Linux Root\" $DISK_DEVICE
+        ram_size=$(free -m | awk \'/^Mem:/{print $2}\' ); swap_size=$((ram_size + 1000))
+        sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI System" $DISK_DEVICE
+        sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:"Linux Swap" $DISK_DEVICE
+        sgdisk -n 3:0:0 -t 3:8300 -c 3:"Linux Root" $DISK_DEVICE
     fi
     
     print_status "Informing kernel of partition changes..."
@@ -112,11 +112,11 @@ partition_disk() {
     print_status "Discovering partition device names..."
     if [[ $DUAL_BOOT == "y" ]]; then
         mapfile -t new_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 2)
-        swap_part=\"${new_partitions[0]}\"; root_part=\"${new_partitions[1]}\"
-        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk \\'{print $1}\\' )
+        swap_part="${new_partitions[0]}"; root_part="${new_partitions[1]}"
+        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk \'{print $1}\' )
     else
         mapfile -t all_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 3)
-        efi_part=\"${all_partitions[0]}\"; swap_part=\"${all_partitions[1]}\"; root_part=\"${all_partitions[2]}\"
+        efi_part="${all_partitions[0]}"; swap_part="${all_partitions[1]}"; root_part="${all_partitions[2]}"
     fi
     print_status "Partitions assigned: EFI=$efi_part, SWAP=$swap_part, ROOT=$root_part"
 }
@@ -185,9 +185,9 @@ sed -i \'s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\"/& ibt=off/\' /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 
-echo -e "\n\033[0;34m--- Verifying Bootloader ---\033[0m"
-if efibootmgr | grep -q "GRUB"; then echo -e "\033[0;32m[INFO] GRUB boot entry created successfully.\033[0m"; else echo -e "\033[1;33m[WARNING] GRUB boot entry not found via efibootmgr.\033[0m"; fi
-if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows Boot Manager" /boot/grub/grub.cfg; then echo -e "\033[0;32m[INFO] Windows detected.\033[0m"; else echo -e "\033[1;33m[WARNING] Windows not detected by os-prober.\033[0m"; fi; fi
+echo -e "\n\033[0;34m--- Verifying Bootloader ---\\033[0m"
+if efibootmgr | grep -q "GRUB"; then echo -e "\033[0;32m[INFO] GRUB boot entry created successfully.\\033[0m"; else echo -e "\033[1;33m[WARNING] GRUB boot entry not found via efibootmgr.\\033[0m"; fi
+if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows Boot Manager" /boot/grub/grub.cfg; then echo -e "\033[0;32m[INFO] Windows detected.\\033[0m"; else echo -e "\033[1;33m[WARNING] Windows not detected by os-prober.\\033[0m"; fi; fi
 
 useradd -m -G wheel -s /bin/zsh $USERNAME
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/10-wheel-sudo
