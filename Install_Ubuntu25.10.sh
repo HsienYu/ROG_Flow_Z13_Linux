@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Install_Ubuntu25.10.sh - Configurable Ubuntu 25.10 Installation Script for ASUS ROG Flow Z13
-# Author: Gemini (adapted from sqazi's Arch script)
-# Version: 2.0.0
-# Date: September 10, 2025
+#Install_Ubuntu25.10.sh - Configurable Ubuntu 25.10 Installation Script for ASUS ROG Flow Z13
+#Author: Gemini (adapted from sqazi's Arch script)
+#Version: 2.0.0
+#Date: September 10, 2025
 
 set -e  # Exit on any error
 
@@ -25,7 +25,7 @@ DUAL_BOOT=""
 ENABLE_SNAPSHOTS=""
 DISK_DEVICE=""
 USERNAME=""
-HOSTNAME=""
+HOTNAME=""
 TIMEZONE=""
 
 # --- Helper Functions ---
@@ -43,7 +43,7 @@ configure_installation() {
     while true; do
         read -p "Enter the disk device (e.g., nvme0n1): " DISK_DEVICE
         [[ -z "$DISK_DEVICE" ]] && { print_error "Disk device cannot be empty."; continue; }
-        DISK_DEVICE=\"${DISK_DEVICE#/dev/}\"; [[ ! -b "/dev/$DISK_DEVICE" ]] && { print_error "Disk does not exist."; continue; }
+        DISK_DEVICE="${DISK_DEVICE#/dev/}"; [[ ! -b "/dev/$DISK_DEVICE" ]] && { print_error "Disk does not exist."; continue; }
         read -p "Confirm disk /dev/$DISK_DEVICE? (y/n): " confirm_disk; [[ $confirm_disk == "y" ]] && { DISK_DEVICE="/dev/$DISK_DEVICE"; break; }
     done
     read -p "Dual-boot with Windows? (y/n): " DUAL_BOOT
@@ -51,7 +51,7 @@ configure_installation() {
     while true; do read -p "Enter hostname: " HOSTNAME; [[ "$HOSTNAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$ ]] && break || print_error "Invalid hostname."; done
     while true; do read -p "Enter timezone (e.g., America/New_York): " TIMEZONE; [[ -f "/usr/share/zoneinfo/$TIMEZONE" ]] && break || print_warning "Timezone not found."; done
     echo "Desktop: 1) GNOME 2) XFCE 3) KDE 4) i3 5) Minimal"; read -p "Choose (1): " desktop_choice
-    case $desktop_choice in 2) INSTALL_DESKTOP=\"xfce\";; 3) INSTALL_DESKTOP=\"kde\";; 4) INSTALL_DESKTOP=\"i3\";; 5) INSTALL_DESKTOP=\"minimal\";; *) INSTALL_DESKTOP=\"gnome\";; esac
+    case $desktop_choice in 2) INSTALL_DESKTOP="xfce";; 3) INSTALL_DESKTOP="kde";; 4) INSTALL_DESKTOP="i3";; 5) INSTALL_DESKTOP="minimal";; *) INSTALL_DESKTOP="gnome";; esac
     read -p "Install gaming setup? (y/n): " INSTALL_GAMING
     read -p "Install power management? (y/n): " INSTALL_POWER_MGMT
     [[ "$FS_TYPE" == "zfs" ]] && read -p "Enable ZFS snapshots? (y/n): " ENABLE_SNAPSHOTS
@@ -69,30 +69,30 @@ check_prerequisites() {
 partition_disk() { # This function is identical to the Arch script and remains robust
     print_header "Partitioning Disk"
     if [[ $DUAL_BOOT == "y" ]]; then
-        ram_size=$(free -m | awk \\'/^Mem:/{print $2}\\\'); swap_size=$((ram_size + 1000))
-        sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:\"Linux Swap\" $DISK_DEVICE
-        sgdisk -n 0:0:0 -t 0:8300 -c 0:\"Linux Root\" $DISK_DEVICE
+        ram_size=$(free -m | awk '/^Mem:/{print $2}' ); swap_size=$((ram_size + 1000))
+        sgdisk -n 0:0:+${swap_size}M -t 0:8200 -c 0:"Linux Swap" $DISK_DEVICE
+        sgdisk -n 0:0:0 -t 0:8300 -c 0:"Linux Root" $DISK_DEVICE
     else
         sgdisk -Z $DISK_DEVICE; sgdisk -o $DISK_DEVICE
-        ram_size=$(free -m | awk \\'/^Mem:/{print $2}\\\'); swap_size=$((ram_size + 1000))
-        sgdisk -n 1:0:+512M -t 1:ef00 -c 1:\"EFI System\" $DISK_DEVICE
-        sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:\"Linux Swap\" $DISK_DEVICE
-        sgdisk -n 3:0:0 -t 3:8300 -c 3:\"Linux Root\" $DISK_DEVICE
+        ram_size=$(free -m | awk '/^Mem:/{print $2}' ); swap_size=$((ram_size + 1000))
+        sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI System" $DISK_DEVICE
+        sgdisk -n 2:0:+${swap_size}M -t 2:8200 -c 2:"Linux Swap" $DISK_DEVICE
+        sgdisk -n 3:0:0 -t 3:8300 -c 3:"Linux Root" $DISK_DEVICE
     fi
     partprobe $DISK_DEVICE; sleep 2
     if [[ $DUAL_BOOT == "y" ]]; then
-        mapfile -t new_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 2); swap_part=\"${new_partitions[0]}\"; root_part=\"${new_partitions[1]}\"
-        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk \\'{print $1}\\\' )
+        mapfile -t new_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 2); swap_part="${new_partitions[0]}"; root_part="${new_partitions[1]}"
+        efi_part=$(lsblk -prno NAME,PARTTYPE "$DISK_DEVICE" | grep -i "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" | awk '{print $1}' )
     else
-        mapfile -t all_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 3); efi_part=\"${all_partitions[0]}\"; swap_part=\"${all_partitions[1]}\"; root_part=\"${all_partitions[2]}\"
+        mapfile -t all_partitions < <(lsblk -prno NAME "$DISK_DEVICE" | tail -n 3); efi_part="${all_partitions[0]}"; swap_part="${all_partitions[1]}"; root_part="${all_partitions[2]}"
     fi
     print_status "Partitions assigned: EFI=$efi_part, SWAP=$swap_part, ROOT=$root_part"
 }
 
 setup_filesystem_and_debootstrap() {
     print_header "Formatting, Mounting and Installing Base System ($FS_TYPE)"
-    [[ $DUAL_BOOT != "y" ]] && mkfs.fat -F32 -n \"EFI\" $efi_part
-    mkswap -L \"Ubuntu_Swap\" $swap_part; swapon $swap_part
+    [[ $DUAL_BOOT != "y" ]] && mkfs.fat -F32 -n "EFI" $efi_part
+    mkswap -L "Ubuntu_Swap" $swap_part; swapon $swap_part
 
     if [[ "$FS_TYPE" == "zfs" ]]; then
         zpool create -f -o ashift=12 -O compression=zstd -O acltype=posixacl -O xattr=sa -O relatime=on -O normalization=formD -O mountpoint=none -O canmount=off -O dnodesize=auto -R /mnt zroot $root_part
@@ -100,7 +100,7 @@ setup_filesystem_and_debootstrap() {
         zfs create -o mountpoint=/home zroot/home; zfs create -o mountpoint=/var -o canmount=off zroot/var; zfs create zroot/var/log
         [[ $ENABLE_SNAPSHOTS == "y" ]] && zfs set com.sun:auto-snapshot=true zroot/ROOT/default
     else
-        mkfs.ext4 -L \"Ubuntu_Root\" $root_part; mount $root_part /mnt
+        mkfs.ext4 -L "Ubuntu_Root" $root_part; mount $root_part /mnt
     fi
 
     print_status "Bootstrapping Ubuntu $UBUNTU_CODENAME..."
@@ -116,7 +116,7 @@ setup_filesystem_and_debootstrap() {
 
 configure_system_and_install() {
     print_header "Configuring System and Installing Software"
-    for dir in dev proc sys; do mount --rbind /$dir /mnt/$dir;
+    for dir in dev proc sys; do mount --rbind /$dir /mnt/$dir; done
     echo "nameserver 8.8.8.8" > /mnt/etc/resolv.conf
 
     chroot /mnt /bin/bash <<CHROOT_EOF
@@ -136,7 +136,7 @@ apt-get install -y linux-generic grub-efi-amd64 network-manager git zsh
 
 # Configure GRUB and verify
 [[ "$DUAL_BOOT" == "y" ]] && sed -i 's/#GRUB_DISABLE_OS_PROBER=false/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& ibt=off/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^ vitalibtnom"/& ibt=off/' /etc/default/grub
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=Ubuntu --recheck; update-grub
 apt-get install -y efibootmgr; if efibootmgr | grep -qi "Ubuntu"; then echo "Ubuntu boot entry OK"; else echo "Ubuntu boot entry NOT FOUND"; fi
 if [[ "$DUAL_BOOT" == "y" ]]; then if grep -qi "Windows" /boot/grub/grub.cfg; then echo "Windows detected"; else echo "Windows NOT detected"; fi; fi
