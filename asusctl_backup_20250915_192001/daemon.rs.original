@@ -1,0 +1,159 @@
+use std::env;
+use std::error::Error;
+use std::sync::Arc;
+
+use ::zbus::Connection;
+use asusd::asus_armoury::start_attributes_zbus;
+use asusd::aura_manager::DeviceManager;
+use asusd::config::Config;
+// DISABLED: Screen brightness control conflicts with Ubuntu native F7/F8 keys
+// use asusd::ctrl_backlight::CtrlBacklight;
+use asusd::ctrl_fancurves::CtrlFanCurveZbus;
+use asusd::ctrl_platform::CtrlPlatform;
+use asusd::{print_board_info, start_tasks, CtrlTask, DBUS_NAME};
+use config_traits::{StdConfig, StdConfigLoad2};
+use futures_util::lock::Mutex;
+use log::{error, info, warn};
+use rog_platform::asus_armoury::FirmwareAttributes;
+use rog_platform::platform::RogPlatform;
+use rog_platform::power::AsusPower;
+use zbus::fdo::ObjectManager;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // console_subscriber::init();
+    let mut logger = env_logger::Builder::new();
+    logger
+        .parse_default_env()
+        .target(env_logger::Target::Stdout)
+        .format_timestamp(None)
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+
+    let is_service = match env::var_os("IS_SERVICE") {
+        Some(val) => val == "1",
+        None => true,
+    };
+
+    if !is_service {
+        println!("asusd should be only run from the right systemd service");
+        println!(
+            "do not run in your terminal, if you need logs please use journalctl -b -u asusd"
+        );
+        println!("asusd will now exit");
+        return Ok(());
+    }
+
+    info!("       daemon v{} (Ubuntu-Minimal)", asusd::VERSION);
+    info!("    rog-anime v{}", rog_anime::VERSION);
+    info!("    rog-slash v{}", rog_slash::VERSION);
+    info!("     rog-aura v{}", rog_aura::VERSION);
+    info!(" rog-profiles v{}", rog_profiles::VERSION);
+    info!("rog-platform v{}", rog_platform::VERSION);
+    info!("🔆 Screen brightness control DISABLED - Ubuntu F7/F8 keys work perfectly!");
+
+    start_daemon().await?;
+    Ok(())
+}
+
+/// The actual main loop for the daemon (Ubuntu-minimal version)
+async fn start_daemon() -> Result<(), Box<dyn Error>> {
+    print_board_info();
+
+    // Start zbus server
+    let mut server = Connection::system().await?;
+    server.object_server().at("/", ObjectManager).await.unwrap();
+
+    let config = Config::new().load();
+    let cfg_path = config.file_path();
+    let config = Arc::new(Mutex::new(config));
+
+    // Initialize platform components
+    let platform = RogPlatform::new()?;
+    let power = AsusPower::new()?;
+    let attributes = FirmwareAttributes::new();
+    start_attributes_zbus(
+        &server,
+        platform.clone(),
+        power.clone(),
+        attributes.clone(),
+        config.clone(),
+    )
+    .await?;
+
+    // Fan curve control (if supported)
+    match CtrlFanCurveZbus::new() {
+        Ok(ctrl) => {
+            info!("✅ Fan curve control available");
+            let sig_ctx = CtrlFanCurveZbus::signal_context(&server)?;
+            start_tasks(ctrl, &mut server, sig_ctx).await?;
+        }
+        Err(err) => {
+            warn!("⚠️ Fan curves not available: {}", err);
+        }
+    }
+
+    // ============================================================================
+    // BRIGHTNESS CONTROL DISABLED - Ubuntu native F7/F8 keys work instead!
+    // ============================================================================
+    // 
+    // The following code is intentionally disabled to prevent conflicts with
+    // Ubuntu's native ACPI brightness control. This allows F7/F8 keys to work
+    // perfectly while still providing power profiles and keyboard backlights.
+    //
+    // match CtrlBacklight::new(config.clone()) {
+    //     Ok(backlight) => {
+    //         backlight.start_watch_primary().await?;
+    //         backlight.add_to_server(&mut server).await;
+    //         info!("✅ Screen brightness control enabled");
+    //     }
+    //     Err(err) => {
+    //         warn!("Screen brightness control failed: {}", err);
+    //     }
+    // }
+    // 
+    info!("🔆 Using Ubuntu native brightness control - F7/F8 keys work perfectly!");
+    
+    // Platform control (power profiles, keyboard backlight, etc.)
+    match CtrlPlatform::new(
+        platform,
+        power,
+        attributes,
+        config.clone(),
+        &cfg_path,
+        CtrlPlatform::signal_context(&server)?,
+    ) {
+        Ok(ctrl) => {
+            info!("✅ Platform control available (power profiles, keyboard backlight)");
+            let sig_ctx = CtrlPlatform::signal_context(&server)?;
+            start_tasks(ctrl, &mut server, sig_ctx).await?;
+        }
+        Err(err) => {
+            error!("❌ Platform control failed: {}", err);
+        }
+    }
+
+    // Aura device manager (keyboard backlight, etc.)
+    match DeviceManager::new(server.clone()).await {
+        Ok(_) => {
+            info!("✅ Device manager initialized");
+        }
+        Err(err) => {
+            warn!("⚠️ Device manager failed: {}", err);
+        }
+    }
+
+    // Request dbus name after finishing initializing all functions
+    server.request_name(DBUS_NAME).await?;
+
+    info!("🚀 Startup successful! Ubuntu-minimal asusd is running");
+    info!("   💡 Use F7/F8 for brightness (Ubuntu native)");
+    info!("   ⚡ Use 'asusctl profile -P Performance' for power profiles");
+    info!("   ⌨️ Use 'asusctl -k med' for keyboard backlight");
+    
+    // Main event loop
+    loop {
+        // This is just a blocker to idle and ensure the reactor reacts
+        server.executor().tick().await;
+    }
+}
