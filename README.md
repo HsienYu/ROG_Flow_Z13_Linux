@@ -1,159 +1,56 @@
-# ROG Flow Z13 Linux
+# ROG Flow Z13 (GZ302) Linux Setup & Fixes
 
-This repository contains scripts to install and optimize Linux on the ASUS ROG Flow Z13 (2025) with AMD Ryzen Strix Halo APU.
+Comprehensive documentation and automated fixes for running Linux on the ASUS ROG Flow Z13 (2022-2023 models, GZ302 series).
 
-## 🚀 Quick Start
+## Quick Fix: Keyboard/Trackpad Not Working
 
-**Recommended for Machine Learning Development:**
-1. Install Ubuntu 25.10 using `Install_Ubuntu25.10.sh`
-2. Set up ML environment using `Setup_ML_Development.sh`
-
-## Prerequisites
-
-Before running the installation scripts, ensure you have the following:
-
-*   **A bootable USB drive** with a live Linux environment (e.g., Arch Linux, Ubuntu).
-*   **An internet connection**.
-*   **The system booted in UEFI mode**.
-*   **At least 32GB available disk space**.
-
-### For `Install.sh` (Arch Linux)
-
-This script is intended to be run from an Arch Linux live environment. The following packages are required:
-
-*   `git`
-*   `pacman`
-
-### For `Install_Ubuntu25.10.sh` (Ubuntu)
-
-This script is intended to be run from an Ubuntu live environment. The script will attempt to install the following required packages:
-
-*   `debootstrap`
-*   `gdisk`
-*   `zfs-utils`
-*   `software-properties-common`
-
-## Installation
-
-### Ubuntu 25.10
-
-Use the `Install_Ubuntu25.10.sh` script to perform a clean installation of Ubuntu 25.10.
+If your detachable keyboard isn't typing (but trackpad works), run:
 
 ```bash
-./Install_Ubuntu25.10.sh
+sudo ./scripts/fix-keyboard-input.sh
+sudo systemctl restart sddm  # or your display manager
 ```
 
-## 🤖 Machine Learning Development Setup
+## Issues Addressed
 
-After installing Ubuntu, use the ML development script to set up a complete machine learning environment:
+### 1. Keyboard Not Working (Trackpad Works)
+**Symptoms:**
+- Detachable keyboard doesn't type
+- Trackpad works fine
+- `evtest` shows key events but Wayland/X11 doesn't receive them
 
-```bash
-sudo ./Setup_ML_Development.sh
-```
+**Root Cause:**
+- ASUS `hid_asus` driver probe fails with error -12 (ENOMEM)
+- libinput misclassifies keyboard devices as touchpads/mice
+- Hyprland/Wayland compositor doesn't grab the input device
 
-**Features:**
-- Python ML stack (NumPy, Pandas, Scikit-learn, Matplotlib)
-- Deep Learning frameworks (PyTorch with ROCm, TensorFlow, Transformers)
-- Jupyter Lab environment with extensions
-- Visual Studio Code with ML extensions
-- ROCm for AMD GPU acceleration (optimized for Z13's Radeon graphics)
-- Docker support for containerized ML workflows
-- R and RStudio (optional)
-- Z13-specific performance optimizations
+**Solution:**
+- Use `keyd` virtual keyboard daemon to forward input events
+- Add udev rules to force correct device classification
+- Keep `hid_asus` driver loaded (don't blacklist)
 
-## ⚠️ IMPORTANT: Choose Your Configuration
+## Documentation
 
-**Check your current system status first:**
+- **[Keyboard/Trackpad Fix Guide](docs/keyboard-trackpad-fix.md)** - Detailed troubleshooting and fix
+- **[Installation Guide](docs/installation.md)** - General Linux installation tips
+- **[Hardware Quirks](docs/hardware-quirks.md)** - Known hardware issues and workarounds
 
-```bash
-./check_z13_status.sh
-```
+## Scripts
 
-**Ubuntu 24.04+ provides excellent native support for ROG Flow Z13:**
-- ✅ F7/F8 brightness control works perfectly
-- ✅ Volume controls (F1/F2/F3) work
-- ✅ Stable power management
-- ✅ Better battery life
-- ✅ No service conflicts
+- `scripts/fix-keyboard-input.sh` - Automated keyboard/trackpad fix
+- `scripts/revert-keyboard-fix.sh` - Revert keyboard fix changes
+- `scripts/test-input-devices.sh` - Test and diagnose input devices
 
-**📚 Configuration Options:**
-- **[UBUNTU_TROUBLESHOOTING.md](UBUNTU_TROUBLESHOOTING.md)** - Troubleshooting guide
-- **[MINIMAL_ASUSCTL_GUIDE.md](MINIMAL_ASUSCTL_GUIDE.md)** - **⭐ RECOMMENDED: Best of both worlds**
-- **[ROG_FLOW_Z13_GUIDE.md](ROG_FLOW_Z13_GUIDE.md)** - Complete configuration options
+## System Requirements
 
-## 🎮 ASUSCTL Installation Options
-
-### Option 1: Minimal asusctl (Recommended) ⭐
-
-**Best of both worlds - Advanced features + Working brightness keys!**
-
-```bash
-# Install minimal asusctl (keeps F7/F8 working)
-./build_minimal_asusctl.sh
-```
-
-**What you get:**
-- ✅ **Power profiles** (Performance/Balanced/Quiet)
-- ✅ **Keyboard backlight control**
-- ✅ **Fan curve management** 
-- ✅ **Battery charge limiting**
-- ✅ **F7/F8 brightness keys still work**
-
-**See [MINIMAL_ASUSCTL_GUIDE.md](MINIMAL_ASUSCTL_GUIDE.md) for complete details.**
-
-### Option 2: Full asusctl (Advanced Users)
-
-**⚠️ WARNING**: This WILL break Ubuntu's native brightness control (F7/F8 keys).
-
-**Only install if you need:**
-- RGB lighting customization
-- AniMatrix display control
-- Don't mind broken brightness keys
-
-```bash
-./Install_ASUSCTL.sh
-```
-
-**Recovery if needed:**
-```bash
-./ubuntu_cleanup_asusctl.sh
-```
-
-**Features:**
-- **Power Profile Management**: Performance/Balanced/Quiet modes with TDP control
-- **Modern GNOME GUI**: Native GTK4/Adwaita control center
-- **Keyboard Backlight Control**: Adjustable brightness levels
-- **Battery Charge Control**: Set charging limits for battery longevity
-- **Fan Curve Management**: Custom cooling profiles
-- **Desktop Integration**: Appears in applications menu, toast notifications
-
-**Quick Commands:**
-```bash
-# Launch modern GUI
-rog-control-center-gnome
-
-# Switch performance modes (no sudo needed!)
-asusctl profile -P Performance  # Gaming/ML training
-asusctl profile -P Balanced     # General use
-asusctl profile -P Quiet        # Battery saving
-
-# Control keyboard backlight
-asusctl -k low/med/high/off
-
-# Set battery charge limit
-asusctl -c 80  # Recommended for longevity
-```
-
-📖 **Complete Documentation**: See [ASUSCTL_README.md](ASUSCTL_README.md) for detailed usage guide.
-
-### Arch Linux Installation
-
-The `Install.sh` script provides Arch Linux installation with Z13 optimizations:
-
-```bash
-./Install.sh
-```
+- Arch Linux (scripts are Arch-specific, but docs apply to other distros)
+- Hyprland, GNOME, KDE Plasma, or other Wayland/X11 desktop
+- Kernel 6.1+
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Issues and pull requests welcome! Please test on your ROG Flow Z13 and report results.
+
+## License
+
+MIT

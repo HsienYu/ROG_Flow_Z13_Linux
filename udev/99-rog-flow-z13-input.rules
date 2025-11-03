@@ -1,0 +1,19 @@
+# ROG Flow Z13 (GZ302) Input Device udev Rules
+#
+# Force the ASUS detachable keyboard to be classified as a keyboard only.
+# This prevents libinput from misclassifying it as a mouse/touchpad.
+#
+# Installation:
+#   sudo cp 99-rog-flow-z13-input.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload
+#   sudo udevadm trigger -s input
+#
+
+# Main detachable keyboard (GZ302EA model)
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ASUSTeK Computer Inc. GZ302EA-Keyboard", ENV{ID_INPUT_KEYBOARD}="1", ENV{ID_INPUT_MOUSE}=""
+
+# Fallback for older kernels or different firmware versions
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Asus Keyboard", ENV{ID_INPUT_KEYBOARD}="1", ENV{ID_INPUT_MOUSE}=""
+
+# N-Key Device (some models report as this)
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ASUSTeK Computer Inc. N-KEY Device", ENV{ID_INPUT_KEYBOARD}="1"
