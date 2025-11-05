@@ -2,15 +2,27 @@
 
 ## Problem Description
 
-The ASUS ROG Flow Z13 detachable keyboard often fails to work under Linux while the trackpad functions normally. This affects Wayland compositors (Hyprland, GNOME Wayland, Sway) more severely than X11.
+The ASUS ROG Flow Z13 detachable keyboard has two main issues under Linux:
+
+1. **Keyboard Input Issue**: Keyboard keys don't produce input in Wayland compositors
+2. **Touchpad Scrolling Issue**: Two-finger scrolling doesn't work after boot
+
+These affect Wayland compositors (Hyprland, GNOME Wayland, Sway) more severely than X11.
 
 ## Symptoms
 
+### Keyboard Issue
 - Trackpad works and responds to clicks/gestures
 - Keyboard keys don't produce any input
 - `sudo evtest /dev/input/eventX` shows keyboard events are generated at hardware level
 - Keyboard backlight works
 - External USB keyboards work fine
+
+### Touchpad Scrolling Issue
+- Touchpad clicks work
+- Single-finger movement works
+- Two-finger scrolling doesn't work
+- After running `sudo modprobe -r hid_asus && sudo modprobe hid_asus`, scrolling works
 
 ## Root Causes
 
@@ -36,12 +48,20 @@ Even when events reach `/dev/input/eventX`, the Wayland compositor may not grab 
 
 ## Solution: Automated Fix
 
-### Quick Fix
+### Keyboard Input Fix
 ```bash
 cd ~/GitRepos/ROG_Flow_Z13_Linux
 sudo ./scripts/fix-keyboard-input.sh
 sudo systemctl restart sddm  # or your display manager
 ```
+
+### Touchpad Scrolling Fix
+```bash
+cd ~/GitRepos/ROG_Flow_Z13_Linux
+sudo ./scripts/install-touchpad-fix.sh
+```
+
+This installs a systemd service that automatically reloads the `hid_asus` module on boot, ensuring two-finger scrolling works every time.
 
 ### What the Fix Does
 
@@ -151,6 +171,32 @@ Then reload: `hyprctl reload`
 
 ## Troubleshooting
 
+### Touchpad scrolling doesn't work
+
+**First, try manual reload:**
+```bash
+sudo modprobe -r hid_asus && sudo modprobe hid_asus
+```
+
+If that works, install the automatic fix:
+```bash
+sudo ./scripts/install-touchpad-fix.sh
+```
+
+**Check if service is running:**
+```bash
+sudo systemctl status hid-asus-reload
+```
+
+**Verify touchpad is properly detected:**
+```bash
+sudo libinput list-devices | grep -A15 "GZ302EA-Keyboard Touchpad"
+```
+
+Should show:
+- Capabilities: `pointer gesture`
+- Scroll methods: `*two-finger edge`
+
 ### Keyboard still doesn't work after fix
 
 **Check tablet mode:**
@@ -197,6 +243,7 @@ See [keyd documentation](https://github.com/rvaiya/keyd) for full syntax.
 
 ## Revert Changes
 
+### Remove keyboard fix
 ```bash
 sudo ./scripts/revert-keyboard-fix.sh
 ```
@@ -207,6 +254,18 @@ sudo systemctl disable --now keyd
 sudo rm /etc/udev/rules.d/99-rog-flow-z13-input.rules
 sudo udevadm control --reload
 sudo systemctl restart sddm
+```
+
+### Remove touchpad scrolling fix
+```bash
+sudo ./scripts/uninstall-touchpad-fix.sh
+```
+
+Or manually:
+```bash
+sudo systemctl disable --now hid-asus-reload
+sudo rm /etc/systemd/system/hid-asus-reload.service
+sudo systemctl daemon-reload
 ```
 
 ## Alternative Approaches (Not Recommended)
@@ -235,4 +294,15 @@ The ROG Flow Z13 detachable keyboard is actually a USB device with multiple HID 
 - Interface 3: Touchpad
 - Interface 4: Wireless radio control
 
-The hid_asus driver fails to probe interfaces 1 and 4 with error -12, but interfaces 0, 2, and 3 work. The keyd solution bypasses this by creating a reliable virtual keyboard that always works with compositors.
+### Keyboard Issue
+The hid_asus driver fails to probe interfaces 1 and 4 with error -12 (ENOMEM), but interfaces 0, 2, and 3 work. The keyd solution bypasses this by creating a reliable virtual keyboard that always works with compositors.
+
+### Touchpad Scrolling Issue
+On boot, interface 3 (touchpad) gets claimed by the generic `hid-generic` driver before `hid_asus` can bind to it. The generic driver doesn't properly support multi-touch gestures. Reloading the `hid_asus` module forces proper driver binding:
+
+```bash
+# Unbind hid-generic, bind hid_asus
+sudo modprobe -r hid_asus && sudo modprobe hid_asus
+```
+
+The systemd service automates this on every boot.

@@ -1,0 +1,14 @@
+[Unit]
+Description=Reload hid_asus module for ROG Flow Z13 touchpad
+After=multi-user.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/modprobe -r hid_asus
+ExecStart=/usr/bin/sleep 1
+ExecStart=/usr/bin/modprobe hid_asus
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
