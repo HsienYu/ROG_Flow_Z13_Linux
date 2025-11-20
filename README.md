@@ -1,6 +1,6 @@
 # ROG Flow Z13 (GZ302) Linux Setup & Fixes
 
-Comprehensive documentation and automated fixes for running Linux on the ASUS ROG Flow Z13 (2022-2023 models, GZ302 series).
+Comprehensive documentation and automated fixes for running Linux on the ASUS ROG Flow Z13 (2025 models, GZ302 series).
 
 ## 🚀 Fresh Install (Recommended)
 
@@ -72,7 +72,7 @@ sudo systemctl restart sddm  # or your display manager
 ## System Requirements
 
 - Arch Linux (scripts are Arch-specific, but docs apply to other distros)
-- Hyprland, GNOME, KDE Plasma, or other Wayland/X11 desktop
+- Test on Omarchy linux
 - Kernel 6.1+
 
 ## Contributing
