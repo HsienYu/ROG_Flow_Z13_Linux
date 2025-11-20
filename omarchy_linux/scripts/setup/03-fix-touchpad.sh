@@ -14,7 +14,8 @@ fi
 
 # Copy systemd service
 echo "[INFO] Installing systemd service..."
-cp -v "$(dirname "$0")/../systemd/hid-asus-reload.service" /etc/systemd/system/
+SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cp -v "$SCRIPT_DIR/config/systemd/hid-asus-reload.service" /etc/systemd/system/
 
 # Reload systemd
 echo "[INFO] Reloading systemd..."
@@ -36,4 +37,4 @@ echo "The hid_asus module will be automatically reloaded on every boot."
 echo "Your touchpad two-finger scrolling should work after each restart."
 echo ""
 echo "To check status: sudo systemctl status hid-asus-reload"
-echo "To uninstall: sudo ./scripts/uninstall-touchpad-fix.sh"
+echo "To uninstall: sudo $SCRIPT_DIR/scripts/uninstall/uninstall-touchpad-fix.sh"

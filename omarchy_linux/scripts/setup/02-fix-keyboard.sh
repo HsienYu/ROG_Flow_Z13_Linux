@@ -78,14 +78,10 @@ echo
 
 # Step 4: Create udev rule
 log_info "Step 4: Creating udev rule..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 UDEV_RULE="/etc/udev/rules.d/99-rog-flow-z13-input.rules"
-cat > "$UDEV_RULE" <<'UDEV_EOF'
-# Force ASUS ROG Flow Z13 detachable keyboard to be classified as keyboard only
-# This prevents libinput from misclassifying it as a mouse/touchpad
-SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ASUSTeK Computer Inc. GZ302EA-Keyboard", ENV{ID_INPUT_KEYBOARD}="1", ENV{ID_INPUT_MOUSE}=""
-SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Asus Keyboard", ENV{ID_INPUT_KEYBOARD}="1", ENV{ID_INPUT_MOUSE}=""
-UDEV_EOF
-log_info "udev rule created at $UDEV_RULE"
+cp "$SCRIPT_DIR/config/udev/99-rog-flow-z13-input.rules" "$UDEV_RULE"
+log_info "udev rule installed at $UDEV_RULE"
 echo
 
 # Step 5: Reload udev rules

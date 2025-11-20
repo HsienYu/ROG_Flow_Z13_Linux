@@ -102,12 +102,12 @@ Your system diagnostic shows:
 
 Run the diagnostic script:
 ```bash
-sudo ./scripts/diagnose-boot-error.sh
+sudo ./scripts/diagnostics/diagnose-boot.sh
 ```
 
 Check the generated log in `/tmp/boot-diagnostic-*.log`
 
 ## Related Issues
 
-- If keyboard doesn't work after boot: see [keyboard-trackpad-fix.md](keyboard-trackpad-fix.md)
-- For other hardware quirks: see [hardware-quirks.md](hardware-quirks.md)
+- If keyboard doesn't work after boot: see [input-devices.md](input-devices.md)
+- For general installation: see [../../INSTALL.md](../../INSTALL.md)

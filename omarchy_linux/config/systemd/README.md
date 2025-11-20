@@ -11,13 +11,13 @@
 ### Installation
 
 ```bash
-sudo ./scripts/install-touchpad-fix.sh
+sudo ./scripts/setup/03-fix-touchpad.sh
 ```
 
 ### Manual Installation
 
 ```bash
-sudo cp systemd/hid-asus-reload.service /etc/systemd/system/
+sudo cp config/systemd/hid-asus-reload.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now hid-asus-reload.service
 ```
@@ -31,7 +31,7 @@ sudo systemctl status hid-asus-reload
 ### Uninstall
 
 ```bash
-sudo ./scripts/uninstall-touchpad-fix.sh
+sudo ./scripts/uninstall/uninstall-touchpad-fix.sh
 ```
 
 ### How It Works

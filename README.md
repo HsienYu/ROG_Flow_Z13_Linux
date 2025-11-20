@@ -2,12 +2,26 @@
 
 Comprehensive documentation and automated fixes for running Linux on the ASUS ROG Flow Z13 (2022-2023 models, GZ302 series).
 
-## Quick Fix: Keyboard/Trackpad Not Working
+## 🚀 Fresh Install (Recommended)
+
+For a new Arch Linux installation, run the automated setup:
+
+```bash
+cd omarchy_linux
+sudo ./fresh-install.sh
+```
+
+This installs everything needed: asusctl, keyboard/touchpad fixes, and optional GUI.
+
+**See [INSTALL.md](omarchy_linux/INSTALL.md) for detailed installation guide.**
+
+## Quick Fix: Keyboard/Touchpad Not Working
 
 If your detachable keyboard isn't typing (but trackpad works), run:
 
 ```bash
-sudo ./scripts/fix-keyboard-input.sh
+cd omarchy_linux
+sudo ./scripts/setup/02-fix-keyboard.sh
 sudo systemctl restart sddm  # or your display manager
 ```
 
@@ -31,15 +45,29 @@ sudo systemctl restart sddm  # or your display manager
 
 ## Documentation
 
-- **[Keyboard/Trackpad Fix Guide](docs/keyboard-trackpad-fix.md)** - Detailed troubleshooting and fix
-- **[Installation Guide](docs/installation.md)** - General Linux installation tips
-- **[Hardware Quirks](docs/hardware-quirks.md)** - Known hardware issues and workarounds
+### Installation
+- **[INSTALL.md](omarchy_linux/INSTALL.md)** - Complete fresh install guide
+- **[fresh-install.sh](omarchy_linux/fresh-install.sh)** - Automated setup script
+
+### Troubleshooting
+- **[Input Devices](omarchy_linux/docs/troubleshooting/input-devices.md)** - Keyboard/trackpad troubleshooting
+- **[Boot Errors](omarchy_linux/docs/troubleshooting/boot-errors.md)** - BIOS/UEFI issues (beseed32)
 
 ## Scripts
 
-- `scripts/fix-keyboard-input.sh` - Automated keyboard/trackpad fix
-- `scripts/revert-keyboard-fix.sh` - Revert keyboard fix changes
-- `scripts/test-input-devices.sh` - Test and diagnose input devices
+### Setup
+- `scripts/setup/01-install-asusctl.sh` - Install ASUS control daemon
+- `scripts/setup/02-fix-keyboard.sh` - Fix keyboard input
+- `scripts/setup/03-fix-touchpad.sh` - Fix touchpad scrolling
+- `scripts/setup/04-install-gui.sh` - Install AsusCtrl GUI
+
+### Diagnostics
+- `scripts/diagnostics/test-input.sh` - Test keyboard/trackpad
+- `scripts/diagnostics/diagnose-boot.sh` - Diagnose boot issues
+
+### Uninstall
+- `scripts/uninstall/revert-keyboard-fix.sh` - Remove keyboard fix
+- `scripts/uninstall/uninstall-touchpad-fix.sh` - Remove touchpad fix
 
 ## System Requirements
 

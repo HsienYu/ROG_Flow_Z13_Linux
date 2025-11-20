@@ -50,15 +50,15 @@ Even when events reach `/dev/input/eventX`, the Wayland compositor may not grab 
 
 ### Keyboard Input Fix
 ```bash
-cd ~/GitRepos/ROG_Flow_Z13_Linux
-sudo ./scripts/fix-keyboard-input.sh
+cd ~/GitRepos/ROG_Flow_Z13_Linux/omarchy_linux
+sudo ./scripts/setup/02-fix-keyboard.sh
 sudo systemctl restart sddm  # or your display manager
 ```
 
 ### Touchpad Scrolling Fix
 ```bash
-cd ~/GitRepos/ROG_Flow_Z13_Linux
-sudo ./scripts/install-touchpad-fix.sh
+cd ~/GitRepos/ROG_Flow_Z13_Linux/omarchy_linux
+sudo ./scripts/setup/03-fix-touchpad.sh
 ```
 
 This installs a systemd service that automatically reloads the `hid_asus` module on boot, ensuring two-finger scrolling works every time.
@@ -180,7 +180,7 @@ sudo modprobe -r hid_asus && sudo modprobe hid_asus
 
 If that works, install the automatic fix:
 ```bash
-sudo ./scripts/install-touchpad-fix.sh
+sudo ./scripts/setup/03-fix-touchpad.sh
 ```
 
 **Check if service is running:**
@@ -245,7 +245,7 @@ See [keyd documentation](https://github.com/rvaiya/keyd) for full syntax.
 
 ### Remove keyboard fix
 ```bash
-sudo ./scripts/revert-keyboard-fix.sh
+sudo ./scripts/uninstall/revert-keyboard-fix.sh
 ```
 
 Or manually:
@@ -258,7 +258,7 @@ sudo systemctl restart sddm
 
 ### Remove touchpad scrolling fix
 ```bash
-sudo ./scripts/uninstall-touchpad-fix.sh
+sudo ./scripts/uninstall/uninstall-touchpad-fix.sh
 ```
 
 Or manually:
