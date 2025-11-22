@@ -1,0 +1,13 @@
+[Unit]
+Description=Fix display wake from suspend
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+# Force display refresh after resume
+ExecStart=/bin/sh -c 'sleep 2; for display in /sys/class/drm/card*/card*/enabled; do [ -f "$display" ] && echo on > "$display" 2>/dev/null || true; done'
+# Restart display manager if needed
+ExecStart=/bin/systemctl restart gdm3.service
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

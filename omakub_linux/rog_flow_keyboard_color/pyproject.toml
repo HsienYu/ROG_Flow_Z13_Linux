@@ -1,0 +1,9 @@
+[project]
+name = "keyboard-rgb-control"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "hidapi>=0.14.0.post4",
+    "pyqt6>=6.10.0",
+]
