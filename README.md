@@ -17,6 +17,8 @@ This installs everything needed: asusctl, keyboard/touchpad fixes, and optional 
 
 ## Quick Fix: Keyboard/Touchpad Not Working
 
+> **💎 Omarchy users (as of Nov 26, 2025):** The latest Omarchy Arch Linux update has fixed the keyboard issue! Test your keyboard first—you may not need to run the fix below.
+
 If your detachable keyboard isn't typing (but trackpad works), run:
 
 ```bash
@@ -43,6 +45,8 @@ sudo systemctl restart sddm  # or your display manager
 - Add udev rules to force correct device classification
 - Keep `hid_asus` driver loaded (don't blacklist)
 
+**Note:** Fixed out-of-the-box in Omarchy as of Nov 26, 2025.
+
 ## Documentation
 
 ### Installation
@@ -57,7 +61,7 @@ sudo systemctl restart sddm  # or your display manager
 
 ### Setup
 - `scripts/setup/01-install-asusctl.sh` - Install ASUS control daemon
-- `scripts/setup/02-fix-keyboard.sh` - Fix keyboard input
+- `scripts/setup/02-fix-keyboard.sh` - Fix keyboard input (usually not needed on Omarchy as of Nov 2025)
 - `scripts/setup/03-fix-touchpad.sh` - Fix touchpad scrolling
 - `scripts/setup/04-install-gui.sh` - Install AsusCtrl GUI
 

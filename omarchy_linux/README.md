@@ -33,6 +33,8 @@ See [INSTALL.md](INSTALL.md) for step-by-step instructions.
 **Cause:** ASUS HID driver probe fails, libinput misclassifies device  
 **Solution:** `keyd` virtual keyboard + udev rules
 
+Omarchy note (Nov 26, 2025): The latest Omarchy Arch Linux update fixes the detachable keyboard out of the box. If you're on Omarchy, test typing first; you can skip the keyboard fix if it already works.
+
 ### 2. Touchpad Scrolling Broken 🖱️
 **Problem:** Two-finger scrolling doesn't work after boot  
 **Cause:** Touchpad bound to wrong driver during boot  
@@ -83,7 +85,7 @@ See [docs/troubleshooting/boot-errors.md](docs/troubleshooting/boot-errors.md)
 ### Setup (must run as root)
 ```bash
 sudo ./scripts/setup/01-install-asusctl.sh       # Install asusctl
-sudo ./scripts/setup/02-fix-keyboard.sh          # Fix keyboard
+sudo ./scripts/setup/02-fix-keyboard.sh          # Fix keyboard (Omarchy as of Nov 26, 2025: usually not needed; test first)
 sudo ./scripts/setup/03-fix-touchpad.sh          # Fix touchpad
 sudo ./scripts/setup/04-install-gui.sh           # Install GUI (optional)
 ./scripts/setup/05-backup-restore-configs.sh     # Backup/restore Hyprland configs

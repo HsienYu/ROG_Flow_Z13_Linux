@@ -55,6 +55,8 @@ asusctl -h
 
 ### Step 2: Fix Keyboard Input
 
+> **💎 Omarchy users (as of Nov 26, 2025):** The latest Omarchy Arch Linux update has fixed the keyboard issue! Test your keyboard first before running this script. You may not need it.
+
 ```bash
 sudo ./scripts/setup/02-fix-keyboard.sh
 ```

@@ -1,10 +1,12 @@
 # Keyboard/Trackpad Fix for ROG Flow Z13
 
+> **💎 Omarchy Users (Nov 26, 2025):** The latest Omarchy Arch Linux update has resolved the keyboard input issue! If you're running Omarchy, test your keyboard first—you may not need the fix below. The touchpad scrolling fix may still be needed.
+
 ## Problem Description
 
 The ASUS ROG Flow Z13 detachable keyboard has two main issues under Linux:
 
-1. **Keyboard Input Issue**: Keyboard keys don't produce input in Wayland compositors
+1. **Keyboard Input Issue**: Keyboard keys don't produce input in Wayland compositors *(Fixed in Omarchy as of Nov 26, 2025)*
 2. **Touchpad Scrolling Issue**: Two-finger scrolling doesn't work after boot
 
 These affect Wayland compositors (Hyprland, GNOME Wayland, Sway) more severely than X11.
